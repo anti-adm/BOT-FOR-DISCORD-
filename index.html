@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="referrer" content="no-referrer"><title>Рядом — голосовая комната</title><link rel="stylesheet" href="./style.css"></head>
+<body>
+<header><a class="brand" href="./"><span class="brand-icon">◖◗</span> рядом<span class="small">/ голосовая комната</span></a><span class="private">Личная панель</span></header>
+<main>
+<section class="intro"><p class="eyebrow">ВАШЕ МЕСТО НА СВЯЗИ</p><h1>Быть рядом.<br><span>Даже из браузера.</span></h1><p class="subtitle">Голос из вашей Discord-комнаты — здесь.</p></section>
+<section class="player" aria-label="Прослушивание войса">
+<div class="card-top"><span class="room-label"><span class="room-icon">◖◗</span> Голосовая комната</span><span class="badge" id="badge">Не подключено</span></div>
+<div class="visual"><div class="halo"></div><div class="bars" aria-hidden="true"></div><span class="visual-caption" id="caption">Маленькое место для ваших голосов</span></div>
+<div class="player-heading"><h2 id="headline">Подключимся?</h2><p id="status" role="status" aria-live="polite">Введите ключ доступа, чтобы включить звук.</p></div>
+<form id="connect-form"><label for="key">Ключ доступа</label><div class="key-wrap"><input id="key" type="password" autocomplete="off" placeholder="Ваш личный ключ" required spellcheck="false"><button id="show-key" type="button" aria-label="Показать ключ">Показать</button></div><button id="connect" class="primary" type="submit"><span>▶</span> Слушать войс</button></form>
+<button id="disconnect" class="primary stop" hidden type="button">■ Отключиться</button>
+<div class="volume"><button id="mute" type="button" aria-label="Выключить звук">◖))</button><label class="sr-only" for="volume">Громкость</label><input id="volume" type="range" min="0" max="100" value="80"><output id="volume-value" for="volume">80%</output></div>
+<div class="card-footer"><span><i id="dot"></i><span id="footer-status">Звук выключен</span></span><span id="clock">00:00</span></div>
+</section>
+<details class="settings"><summary>Настройки подключения <span>＋</span></summary><label for="endpoint">Адрес аудиосервера</label><input id="endpoint" type="url" value="https://listen.95-179-152-88.sslip.io" spellcheck="false"><p>Ключ хранится только до закрытия страницы.</p></details>
+</main><footer>рядом <span>Только звук. Только ваша комната.</span></footer>
+<script type="module" src="./app.js"></script>
+</body></html>
