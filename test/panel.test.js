@@ -1,0 +1,52 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import OpusScript from 'opusscript';
+import { createPanelServer } from '../server/index.js';
+import { renderChunk } from '../server/audio.js';
+const key = 'test-key-'.repeat(8);
+test('API requires key, enforces origins, caches chunks and rejects replay queries', async t => {
+  let calls = 0;
+  const server = createPanelServer({ key, directory: '/unused', origins: ['https://panel.example'], now: () => 10000, render: () => { calls++; return { pcm: Buffer.alloc(64000), packets: 1 }; } });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  assert.equal((await fetch(`${base}/api/live`)).status, 401);
+  assert.equal((await fetch(`${base}/api/live`, { headers: { Authorization: 'Bearer wrong' } })).status, 401);
+  const headers = { Authorization: `Bearer ${key}`, Origin: 'https://panel.example' };
+  assert.equal((await fetch(`${base}/api/live`, { headers: { ...headers, Origin: 'https://bad.example' } })).status, 403);
+  const response = await fetch(`${base}/api/live?after=0`, { headers });
+  assert.equal(response.status, 200); assert.equal(response.headers.get('X-Audio-End'), '8000');
+  assert.equal((await response.arrayBuffer()).byteLength, 64000);
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://panel.example');
+  await fetch(`${base}/api/live?after=-999999`, { headers });
+  assert.equal(calls, 1);
+  assert.equal((await fetch(`${base}/api/live?after=8000`, { headers })).status, 204);
+  assert.equal((await fetch(`${base}/api/live?after=nan`, { headers })).status, 400);
+  assert.equal((await fetch(`${base}/.env`)).status, 404);
+  assert.equal((await fetch(`${base}/api/status`, { headers })).status, 200);
+});
+test('reader mixes actual Opus audio, ignores partial tail, does not alter source', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'listen-test-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const encoder = new OpusScript(16000, 1, OpusScript.Application.AUDIO);
+  t.after(() => encoder.delete());
+  const records = [];
+  for (let frame = 0; frame < 100; frame++) {
+    const pcm = Buffer.alloc(640);
+    for (let i = 0; i < 320; i++) pcm.writeInt16LE(Math.round(Math.sin((frame * 320 + i) * Math.PI * 2 * 440 / 16000) * 9000), i * 2);
+    const packet = encoder.encode(pcm, 320), header = Buffer.alloc(18);
+    header.writeDoubleLE(6000 + frame * 20); header.writeBigUInt64LE(123n, 8); header.writeUInt16LE(packet.length, 16);
+    records.push(header, packet);
+  }
+  const file = join(directory, '6-0.bin'), bytes = Buffer.concat([...records, Buffer.alloc(9)]);
+  writeFileSync(file, bytes);
+  const result = renderChunk(directory, 6000, 8000);
+  assert.equal(result.packets, 100);
+  let energy = 0; for (let i = 0; i < result.pcm.length; i += 2) energy += Math.abs(result.pcm.readInt16LE(i));
+  assert.ok(energy > 1000000); assert.deepEqual(readFileSync(file), bytes);
+  const silence = renderChunk(directory, 12000, 14000);
+  assert.equal(silence.packets, 0); assert.ok(silence.pcm.every(byte => byte === 0));
+});

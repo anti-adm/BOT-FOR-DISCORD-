@@ -1,0 +1,24 @@
+[Unit]
+Description=Private voice web panel (read-only buffer reader)
+After=network.target
+
+[Service]
+Type=simple
+User=afkbot
+Group=afkbot
+WorkingDirectory=/opt/afk-listen
+EnvironmentFile=/etc/afk-listen.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+InaccessiblePaths=/opt/afk-bot/.env
+MemoryMax=160M
+CPUQuota=40%
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
